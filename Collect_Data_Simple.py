@@ -1,5 +1,5 @@
-#Setting Up a Meshtastic Python CLI Connection and collecting data
-#Code adapted from: https://github.com/pdxlocations/Meshtastic-Python-Examples/blob/main/print-packets.py
+# Setting Up a Meshtastic Python CLI Connection and collecting data
+# Code adapted from: https://github.com/pdxlocations/Meshtastic-Python-Examples/blob/main/print-packets.py
 
 import csv
 import numpy as np

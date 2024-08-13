@@ -1,22 +1,28 @@
-#Code for sending Messsages and Data over the serial Stream
-import sys
+# Code for sending Messsages and Data over the serial Stream
+# send_packet_to_radio sends a protobuf message over the serial connection to the device 
 
-sys.path.append('/Users/ethan/Desktop/Summer_Internship_2024/Rssi_and_snr_tests/MLDataScraping/pythonmatser')
+# Code adapted from: 
+# - https://github.com/meshtastic/python/blob/master/meshtastic/mesh_interface.py
+# - https://meshtastic.org/docs/development/device/client-api/
+# - https://github.com/meshtastic/firmware/blob/bcdda4de8ab81fec6a35be52cc2a3a0fa3fa5332/src/mesh/StreamAPI.cpp#L82
 
-import meshtastic.mesh_pb2 as mesh_pb2
-import meshtastic.portnums_pb2 as portnums_pb2
+# Meshtastic cli version 2.3.13 changed theese imports:
+try:
+    import meshtastic.mesh_pb2 as mesh_pb2
+    import meshtastic.portnums_pb2 as portnums_pb2
+except ImportError:
+    from meshtastic.protobuf import mesh_pb2, portnums_pb2
+
 import serial
 import time
-import logging
 import random
 import termios 
-import os
 
 START1 = 0x94
 START2 = 0xc3
 
 def generateRadnomPacketID():
-    #Limits here are the semi arbitrary: latest packet I had recived -> the largest 4 byte unsigned value (0xFFFFFFFF) 
+    # Limits here are semi-arbitrary 
     return random.randrange(3170588179, 4294967295)
 
 def send_packet_to_radio(
@@ -73,6 +79,7 @@ def send_message_to_radio(
     send_packet_to_radio(serial_obj=serial_obj, protobuf_message=toRadio)
 
 def send_traceroute(
+    # Not working yet.
     serial_obj, 
     toIdNum,
     meshpacketID,
@@ -89,7 +96,9 @@ def send_traceroute(
     meshpacket = mesh_pb2.MeshPacket()
     meshPacket.decoded.payload = data
     meshPacket.to = toIdNum
-    meshPacket.id = generateRadnomPacketID()
+
+    # if a message has the same packetID as one we have already seen it wount send
+    meshPacket.id = generateRadnomPacketID() 
     meshpacket.channel = channel
     meshPacket.decoded.portnum = portnums_pb2.PortNum.TRACEROUTE_APP
     meshpacket.decoded.want_response = True
@@ -117,17 +126,15 @@ def startConfig(serial_obj):
     configId = random.randint(0, 0xFFFFFFFF)
     startConfig.want_config_id = 69420
     
-    #Dosent Have a packet so just gets sent
-
+    # No packet so just gets sent
     send_packet_to_radio(serial_obj, startConfig)
-
-
-
-
 
 
 if __name__ == '__main__':
     print('Testing Message Sending')
+
+    # If running as main, the serial port will be scraped and every n seconds 
+    # a message will be send using send_message_to_radio()
 
     logging.basicConfig(
         level=logging.DEBUG,
@@ -139,14 +146,13 @@ if __name__ == '__main__':
     INTERVAL = 15
     portList = serial.tools.list_ports.comports()
 
-    for i in range(len(portList)):
-        port = portList[i]
+    # Cannot handle more than one serial port connected at once
+    for port in list_ports.comports():
         if port.vid is not None:
-            print(port.device) #Not Name
+            print(port.device) 
             port_dev = port.device
 
-
-    #Code from the python lib
+    # Code from the meshtastic python lib
     with open(port_dev, 'r', encoding='utf8') as f:
         attrs = termios.tcgetattr(f)
         attrs[2] = attrs[2] & ~termios.HUPCL
@@ -154,12 +160,11 @@ if __name__ == '__main__':
     time.sleep(0.1)
 
 
-    ser = serial.Serial(port=port_dev, baudrate=9600, exclusive=True, timeout=0.5, write_timeout=0) 
+    ser = serial.Serial(port=port_dev, baudrate=115200, exclusive=True, timeout=0.5, write_timeout=0) 
     ser.flush()
     time.sleep(0.1)
 
     connect(ser)
-
     startConfig(ser)
 
     try:
@@ -169,9 +174,9 @@ if __name__ == '__main__':
             time.sleep(1)
             counter += 1
 
-            print(ser.inWaiting())
-            print(ser.in_waiting)
-            print(ser.out_waiting)
+            # print(ser.inWaiting())
+            # print(ser.in_waiting)
+            # print(ser.out_waiting)
 
             while ser.inWaiting() > 0:
                 out += ser.read(1).decode("latin-1")
@@ -180,11 +185,10 @@ if __name__ == '__main__':
                 print('\n' + out)
 
             if counter % INTERVAL == 0:
-                #COuld try flushing the input buffer etc...
                 print(f'Sending Message: {counter}')
                 send_message_to_radio(
                     serial_obj=ser, 
-                    text = f"Hello From Ethan .... {counter}",
+                    text = f" Hello, Counter: {counter}",
                     toIdNum = 1978533556,
                     channel = 0, 
                     want_response = 0,
@@ -194,22 +198,3 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print("\n Shutting down connection ...")
         ser.close()
-
-
-#This workes at the momment -> but as soon as i write to the serial, I cannot read anythingß
-#The Reading Problem is not solved yet tho .... still breaks everytime ...
-
-#Idea at the moment: Have a buffer that reads and writes into the serial for you: Also look at the que functionality of the python cli
-#IT DOSENT need to work after the restart if the traceroute is working correctly -> you just scrape for however many seconds
-#But i still think this will have an effect
-
-
-#Possible haky workaround: you can set the from param of a mesh packet: could use a second node to send the packets with the from of
-#Node being scraped
-
-#Maybe we need to start the connection first connect() .....
-
-
-
-
-
