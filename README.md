@@ -6,7 +6,7 @@
 - Stream_Utils.py: python implementation of sending text, traceroutes, and protobufs to the device over the serial. 
 - Raw_Serial_Scrape.py: code to print the raw output of the serial port of the device
 
-- #### Issues
+### Issues
 - Cannot read and write to serial at same time (in Raw_Serial_Scrape.py). As soon as you write to the serial, the debug messages stop / are not being read. 
 - You can read the protobufs but then you might aswell just use the python cli as done in Collect_Data_Simple.py. 
 - This has been succsessfully implemented in: https://github.com/edproudlove/meshtasticScraper, using the Bluetooth client and serial client together. 
